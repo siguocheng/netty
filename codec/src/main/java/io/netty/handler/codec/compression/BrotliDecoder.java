@@ -19,10 +19,9 @@ package io.netty.handler.codec.compression;
 import com.aayushatharva.brotli4j.decoder.DecoderJNI;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.internal.ObjectUtil;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
@@ -30,23 +29,7 @@ import java.nio.ByteBuffer;
  *
  * See <a href="https://github.com/google/brotli">brotli</a>.
  */
-public final class BrotliDecoder extends ByteToMessageDecoder {
-
-    private enum State {
-        DONE, NEEDS_MORE_INPUT, ERROR
-    }
-
-    static {
-        try {
-            Brotli.ensureAvailability();
-        } catch (Throwable throwable) {
-            throw new ExceptionInInitializerError(throwable);
-        }
-    }
-
-    private final int inputBufferSize;
-    private DecoderJNI.Wrapper decoder;
-    private boolean destroyed;
+public final class BrotliDecoder extends DecompressionHandler {
 
     /**
      * Creates a new BrotliDecoder with a default 8kB input buffer
@@ -60,113 +43,114 @@ public final class BrotliDecoder extends ByteToMessageDecoder {
      * @param inputBufferSize desired size of the input buffer in bytes
      */
     public BrotliDecoder(int inputBufferSize) {
-        this.inputBufferSize = ObjectUtil.checkPositive(inputBufferSize, "inputBufferSize");
+        super(() -> {
+            try {
+                return new BrotliDecompressor(inputBufferSize);
+            } catch (IOException e) {
+                throw new DecompressionException(e);
+            }
+        });
+        ObjectUtil.checkPositive(inputBufferSize, "inputBufferSize");
     }
 
-    private ByteBuf pull(ByteBufAllocator alloc) {
-        ByteBuffer nativeBuffer = decoder.pull();
-        // nativeBuffer actually wraps brotli's internal buffer so we need to copy its content
-        ByteBuf copy = alloc.buffer(nativeBuffer.remaining());
-        copy.writeBytes(nativeBuffer);
-        return copy;
-    }
+    private static final class BrotliDecompressor implements Decompressor {
 
-    private State decompress(ChannelHandlerContext ctx, ByteBuf input, ByteBufAllocator alloc) {
-        for (;;) {
-            switch (decoder.getStatus()) {
-                case DONE:
-                    return State.DONE;
-
-                case OK:
-                    decoder.push(0);
-                    break;
-
-                case NEEDS_MORE_INPUT:
-                    if (decoder.hasOutput()) {
-                        ctx.fireChannelRead(pull(alloc));
-                    }
-
-                    if (!input.isReadable()) {
-                        return State.NEEDS_MORE_INPUT;
-                    }
-
-                    ByteBuffer decoderInputBuffer = decoder.getInputBuffer();
-                    decoderInputBuffer.clear();
-                    int readBytes = readBytes(input, decoderInputBuffer);
-                    decoder.push(readBytes);
-                    break;
-
-                case NEEDS_MORE_OUTPUT:
-                    ctx.fireChannelRead(pull(alloc));
-                    break;
-
-                default:
-                    return State.ERROR;
+        static {
+            try {
+                Brotli.ensureAvailability();
+            } catch (Throwable throwable) {
+                throw new ExceptionInInitializerError(throwable);
             }
         }
-    }
 
-    private static int readBytes(ByteBuf in, ByteBuffer dest) {
-        int limit = Math.min(in.readableBytes(), dest.remaining());
-        ByteBuffer slice = dest.slice();
-        slice.limit(limit);
-        in.readBytes(slice);
-        dest.position(dest.position() + limit);
-        return limit;
-    }
+        private boolean finished;
+        private final DecoderJNI.Wrapper decoder;
 
-    @Override
-    public void handlerAdded0(ChannelHandlerContext ctx) throws Exception {
-        decoder = new DecoderJNI.Wrapper(inputBufferSize);
-    }
-
-    @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-        if (destroyed) {
-            // Skip data received after finished.
-            in.skipBytes(in.readableBytes());
-            return;
+        /**
+         * Creates a new BrotliDecoder with a default 8kB input buffer
+         */
+        BrotliDecompressor() throws IOException {
+            this(8 * 1024);
         }
 
-        if (!in.isReadable()) {
-            return;
+        /**
+         * Creates a new BrotliDecoder
+         * @param inputBufferSize desired size of the input buffer in bytes
+         */
+        BrotliDecompressor(int inputBufferSize) throws IOException {
+            decoder = new DecoderJNI.Wrapper(ObjectUtil.checkPositive(inputBufferSize, "inputBufferSize"));
         }
 
-        try {
-            State state = decompress(ctx, in, ctx.alloc());
-            if (state == State.DONE) {
-                destroy();
-            } else if (state == State.ERROR) {
-                throw new DecompressionException("Brotli stream corrupted");
+        private ByteBuf pull(ByteBufAllocator alloc) {
+            ByteBuffer nativeBuffer = decoder.pull();
+            // nativeBuffer actually wraps brotli's internal buffer so we need to copy its content
+            ByteBuf copy = alloc.buffer(nativeBuffer.remaining());
+            copy.writeBytes(nativeBuffer);
+            return copy;
+        }
+
+        private static int readBytes(ByteBuf in, ByteBuffer dest) {
+            int limit = Math.min(in.readableBytes(), dest.remaining());
+            ByteBuffer slice = dest.slice();
+            slice.limit(limit);
+            in.readBytes(slice);
+            dest.position(dest.position() + limit);
+            return limit;
+        }
+
+        @Override
+        public ByteBuf decompress(ByteBuf input, ByteBufAllocator allocator) throws DecompressionException {
+            if (finished) {
+                return null;
             }
-        } catch (Exception e) {
-            destroy();
-            throw e;
-        }
-    }
 
-    private void destroy() {
-        if (!destroyed) {
-            destroyed = true;
-            decoder.destroy();
-        }
-    }
+            for (;;) {
+                switch (decoder.getStatus()) {
+                    case DONE:
+                        finished = true;
+                        decoder.destroy();
+                        return null;
 
-    @Override
-    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
-        try {
-            destroy();
-        } finally {
-            super.handlerRemoved0(ctx);
-        }
-    }
+                    case OK:
+                        decoder.push(0);
+                        break;
 
-    @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        try {
-            destroy();
-        } finally {
-            super.channelInactive(ctx);
+                    case NEEDS_MORE_INPUT:
+                        if (decoder.hasOutput()) {
+                            return pull(allocator);
+                        }
+
+                        if (!input.isReadable()) {
+                            return null;
+                        }
+
+                        ByteBuffer decoderInputBuffer = decoder.getInputBuffer();
+                        decoderInputBuffer.clear();
+                        int readBytes = readBytes(input, decoderInputBuffer);
+                        decoder.push(readBytes);
+                        break;
+
+                    case NEEDS_MORE_OUTPUT:
+                        return pull(allocator);
+                    default:
+                        finished = true;
+                        decoder.destroy();
+                        throw new DecompressionException("Brotli stream corrupted");
+                }
+            }
+        }
+
+        @Override
+        public boolean isFinished() {
+            return finished;
+        }
+
+        @Override
+        public void close() {
+            if (!finished) {
+                finished = true;
+                decoder.destroy();
+            }
         }
     }
 }

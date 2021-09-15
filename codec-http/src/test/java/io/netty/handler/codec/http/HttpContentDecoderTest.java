@@ -722,7 +722,7 @@ public class HttpContentDecoderTest {
     }
 
     private static byte[] gzDecompress(byte[] input) {
-        ZlibDecoder decoder = ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP);
+        ChannelHandler decoder = ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP);
         EmbeddedChannel channel = new EmbeddedChannel(decoder);
         assertTrue(channel.writeInbound(Unpooled.copiedBuffer(input)));
         assertTrue(channel.finish()); // close the channel to indicate end-of-data
@@ -777,7 +777,7 @@ public class HttpContentDecoderTest {
     }
 
     private static byte[] gzCompress(byte[] input) {
-        ZlibEncoder encoder = ZlibCodecFactory.newZlibEncoder(ZlibWrapper.GZIP);
+        ChannelHandler encoder = ZlibCodecFactory.newZlibEncoder(ZlibWrapper.GZIP);
         EmbeddedChannel channel = new EmbeddedChannel(encoder);
         assertTrue(channel.writeOutbound(Unpooled.wrappedBuffer(input)));
         assertTrue(channel.finish());  // close the channel to indicate end-of-data

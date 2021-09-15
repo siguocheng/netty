@@ -15,8 +15,10 @@
  */
 package io.netty.handler.codec.compression;
 
+import io.netty.channel.ChannelHandler;
+
 /**
- * Creates a new {@link ZlibEncoder} and a new {@link ZlibDecoder}.
+ * Creates a new ZLIB encoder / decoder.
  */
 public final class ZlibCodecFactory {
     private static final boolean supportsWindowSizeAndMemLevel = true;
@@ -28,43 +30,44 @@ public final class ZlibCodecFactory {
         return supportsWindowSizeAndMemLevel;
     }
 
-    public static ZlibEncoder newZlibEncoder(int compressionLevel) {
+    public static ChannelHandler newZlibEncoder(int compressionLevel) {
         return new JdkZlibEncoder(compressionLevel);
     }
 
-    public static ZlibEncoder newZlibEncoder(ZlibWrapper wrapper) {
+    public static ChannelHandler newZlibEncoder(ZlibWrapper wrapper) {
         return new JdkZlibEncoder(wrapper);
     }
 
-    public static ZlibEncoder newZlibEncoder(ZlibWrapper wrapper, int compressionLevel) {
+    public static ChannelHandler newZlibEncoder(ZlibWrapper wrapper, int compressionLevel) {
         return new JdkZlibEncoder(wrapper, compressionLevel);
     }
 
-    public static ZlibEncoder newZlibEncoder(ZlibWrapper wrapper, int compressionLevel, int windowBits, int memLevel) {
+    public static ChannelHandler newZlibEncoder(ZlibWrapper wrapper, int compressionLevel,
+                                                int windowBits, int memLevel) {
         return new JdkZlibEncoder(wrapper, compressionLevel);
     }
 
-    public static ZlibEncoder newZlibEncoder(byte[] dictionary) {
+    public static ChannelHandler newZlibEncoder(byte[] dictionary) {
         return new JdkZlibEncoder(dictionary);
     }
 
-    public static ZlibEncoder newZlibEncoder(int compressionLevel, byte[] dictionary) {
+    public static ChannelHandler newZlibEncoder(int compressionLevel, byte[] dictionary) {
         return new JdkZlibEncoder(compressionLevel, dictionary);
     }
 
-    public static ZlibEncoder newZlibEncoder(int compressionLevel, int windowBits, int memLevel, byte[] dictionary) {
+    public static ChannelHandler newZlibEncoder(int compressionLevel, int windowBits, int memLevel, byte[] dictionary) {
         return new JdkZlibEncoder(compressionLevel, dictionary);
     }
 
-    public static ZlibDecoder newZlibDecoder() {
+    public static ChannelHandler newZlibDecoder() {
         return new JdkZlibDecoder(true);
     }
 
-    public static ZlibDecoder newZlibDecoder(ZlibWrapper wrapper) {
+    public static ChannelHandler newZlibDecoder(ZlibWrapper wrapper) {
         return new JdkZlibDecoder(wrapper, true);
     }
 
-    public static ZlibDecoder newZlibDecoder(byte[] dictionary) {
+    public static ChannelHandler newZlibDecoder(byte[] dictionary) {
         return new JdkZlibDecoder(dictionary);
     }
 

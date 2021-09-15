@@ -17,23 +17,83 @@ package io.netty.handler.codec.compression;
 
 import com.aayushatharva.brotli4j.encoder.Encoder;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToByteEncoder;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
+
+import java.io.IOException;
 
 /**
  * Compress a {@link ByteBuf} with the brotli format.
  *
  * See <a href="https://github.com/google/brotli">brotli</a>.
  */
-@ChannelHandler.Sharable
-public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
+public final class BrotliEncoder extends CompressionHandler {
 
-    private final Encoder.Parameters parameters;
+    private static final class BrotliCompressor implements Compressor {
+        private boolean closed;
+        private final Encoder.Parameters parameters;
+
+        /**
+         * Create a new {@link BrotliEncoder} Instance
+         * with {@link Encoder.Parameters#setQuality(int)} set to 4
+         * and {@link Encoder.Parameters#setMode(Encoder.Mode)} set to {@link Encoder.Mode#TEXT}
+         */
+        BrotliCompressor() {
+            this(BrotliOptions.DEFAULT);
+        }
+
+        /**
+         * Create a new {@link BrotliEncoder} Instance
+         *
+         * @param parameters {@link Encoder.Parameters} Instance
+         */
+        BrotliCompressor(Encoder.Parameters parameters) {
+            this.parameters = ObjectUtil.checkNotNull(parameters, "Parameters");
+        }
+
+        /**
+         * Create a new {@link BrotliEncoder} Instance
+         *
+         * @param brotliOptions {@link BrotliOptions} to use.
+         */
+        BrotliCompressor(BrotliOptions brotliOptions) {
+            this(brotliOptions.parameters());
+        }
+
+        @Override
+        public ByteBuf compress(ByteBuf input, ByteBufAllocator allocator) throws CompressionException {
+            if (closed || !input.isReadable()) {
+                return Unpooled.EMPTY_BUFFER;
+            }
+            byte[] uncompressed = ByteBufUtil.getBytes(input, input.readerIndex(), input.readableBytes(), false);
+            try {
+                byte[] compressed = Encoder.compress(uncompressed, parameters);
+                input.skipBytes(input.readableBytes());
+                return Unpooled.wrappedBuffer(compressed);
+            } catch (IOException e) {
+                closed = true;
+                throw new CompressionException(e);
+            }
+        }
+
+        @Override
+        public ByteBuf finish(ByteBufAllocator allocator) {
+            closed = true;
+            return Unpooled.EMPTY_BUFFER;
+        }
+
+        @Override
+        public boolean isFinished() {
+            return closed;
+        }
+
+        @Override
+        public void close() {
+            closed = true;
+        }
+    }
 
     /**
      * Create a new {@link BrotliEncoder} Instance
@@ -50,7 +110,7 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
      * @param parameters {@link Encoder.Parameters} Instance
      */
     public BrotliEncoder(Encoder.Parameters parameters) {
-        this.parameters = ObjectUtil.checkNotNull(parameters, "Parameters");
+        super(() -> new BrotliCompressor(parameters));
     }
 
     /**
@@ -62,31 +122,4 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
         this(brotliOptions.parameters());
     }
 
-    @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf msg, ByteBuf out) throws Exception {
-        // NO-OP
-    }
-
-    @Override
-    protected ByteBuf allocateBuffer(ChannelHandlerContext ctx, ByteBuf msg, boolean preferDirect) throws Exception {
-        // If ByteBuf is unreadable, then return EMPTY_BUFFER.
-        if (!msg.isReadable()) {
-            return Unpooled.EMPTY_BUFFER;
-        }
-
-        try {
-            byte[] uncompressed = ByteBufUtil.getBytes(msg, msg.readerIndex(), msg.readableBytes(), false);
-            byte[] compressed = Encoder.compress(uncompressed, parameters);
-            if (preferDirect) {
-                ByteBuf out = ctx.alloc().ioBuffer(compressed.length);
-                out.writeBytes(compressed);
-                return out;
-            } else {
-                return Unpooled.wrappedBuffer(compressed);
-            }
-        } catch (Exception e) {
-            ReferenceCountUtil.release(msg);
-            throw e;
-        }
-    }
 }

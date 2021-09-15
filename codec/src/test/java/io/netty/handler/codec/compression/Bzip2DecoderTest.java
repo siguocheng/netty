@@ -49,12 +49,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         try {
             channel.writeInbound(in);
         } finally {
-            try {
-                destroyChannel();
-                fail();
-            } catch (DecompressionException ignored) {
-                // expected
-            }
+            destroyChannel();
         }
     }
 

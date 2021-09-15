@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -390,7 +391,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
     private final class GzipEncoderFactory implements CompressionEncoderFactory {
 
         @Override
-        public MessageToByteEncoder<ByteBuf> createEncoder() {
+        public ChannelHandler createEncoder() {
             return ZlibCodecFactory.newZlibEncoder(
                     ZlibWrapper.GZIP, gzipOptions.compressionLevel(),
                     gzipOptions.windowBits(), gzipOptions.memLevel());
@@ -404,7 +405,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
     private final class DeflateEncoderFactory implements CompressionEncoderFactory {
 
         @Override
-        public MessageToByteEncoder<ByteBuf> createEncoder() {
+        public ChannelHandler createEncoder() {
             return ZlibCodecFactory.newZlibEncoder(
                     ZlibWrapper.ZLIB, deflateOptions.compressionLevel(),
                     deflateOptions.windowBits(), deflateOptions.memLevel());
@@ -418,7 +419,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
     private final class BrEncoderFactory implements CompressionEncoderFactory {
 
         @Override
-        public MessageToByteEncoder<ByteBuf> createEncoder() {
+        public ChannelHandler createEncoder() {
             return new BrotliEncoder(brotliOptions.parameters());
         }
     }
@@ -430,7 +431,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
     private final class ZstdEncoderFactory implements CompressionEncoderFactory {
 
         @Override
-        public MessageToByteEncoder<ByteBuf> createEncoder() {
+        public ChannelHandler createEncoder() {
             return new ZstdEncoder(zstdOptions.compressionLevel(),
                     zstdOptions.blockSize(), zstdOptions.maxEncodeSize());
         }
