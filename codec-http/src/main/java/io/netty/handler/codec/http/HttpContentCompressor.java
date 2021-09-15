@@ -18,20 +18,18 @@ package io.netty.handler.codec.http;
 import java.util.HashMap;
 import java.util.Map;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.handler.codec.compression.Brotli;
-import io.netty.handler.codec.compression.BrotliEncoder;
+import io.netty.handler.codec.compression.BrotliCompressor;
 import io.netty.handler.codec.compression.BrotliOptions;
+import io.netty.handler.codec.compression.CompressionHandler;
 import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.DeflateOptions;
 import io.netty.handler.codec.compression.GzipOptions;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
-import io.netty.handler.codec.compression.ZlibEncoder;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.compression.Zstd;
 import io.netty.handler.codec.compression.ZstdEncoder;
@@ -385,7 +383,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
     }
 
     /**
-     * Compression Encoder Factory that creates {@link ZlibEncoder}s
+     * Compression Encoder Factory that creates encoders
      * used to compress http content for gzip content encoding
      */
     private final class GzipEncoderFactory implements CompressionEncoderFactory {
@@ -399,7 +397,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
     }
 
     /**
-     * Compression Encoder Factory that creates {@link ZlibEncoder}s
+     * Compression Encoder Factory that creates encoders
      * used to compress http content for deflate content encoding
      */
     private final class DeflateEncoderFactory implements CompressionEncoderFactory {
@@ -413,14 +411,14 @@ public class HttpContentCompressor extends HttpContentEncoder {
     }
 
     /**
-     * Compression Encoder Factory that creates {@link BrotliEncoder}s
+     * Compression Encoder Factory that creates {@link BrotliCompressor}s
      * used to compress http content for br content encoding
      */
     private final class BrEncoderFactory implements CompressionEncoderFactory {
 
         @Override
         public ChannelHandler createEncoder() {
-            return new BrotliEncoder(brotliOptions.parameters());
+            return new CompressionHandler(BrotliCompressor.newFactory(brotliOptions.parameters()));
         }
     }
 

@@ -27,11 +27,11 @@ import java.util.function.Supplier;
  */
 public class DecompressionHandler extends ByteToMessageDecoder {
 
-    private final Supplier<Decompressor> decompressorSupplier;
+    private final Supplier<? extends Decompressor> decompressorSupplier;
 
     private Decompressor decompressor;
 
-    DecompressionHandler(Supplier<Decompressor> decompressorSupplier) {
+    public DecompressionHandler(Supplier<? extends Decompressor> decompressorSupplier) {
         this.decompressorSupplier = Objects.requireNonNull(decompressorSupplier, "decompressorSupplier");
     }
 

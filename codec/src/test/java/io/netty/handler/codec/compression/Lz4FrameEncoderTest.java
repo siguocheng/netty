@@ -115,6 +115,7 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
         return Unpooled.wrappedBuffer(decompressed);
     }
 
+    /*
     @Test
     public void testAllocateDirectBuffer() {
         final int blockSize = 100;
@@ -173,7 +174,7 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
         }
     }
 
-    private Lz4FrameEncoder newEncoder(int blockSize, int maxEncodeSize) {
+    private Lz4FrameEncoder newEncoder(int blockSize, int maxEncodeSize) throws Exception {
         Checksum checksum = XXHashFactory.fastestInstance().newStreamingHash32(DEFAULT_SEED).asChecksum();
         Lz4FrameEncoder encoder = new Lz4FrameEncoder(LZ4Factory.fastestInstance(), true,
                                                       blockSize,
@@ -182,12 +183,14 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
         encoder.handlerAdded(ctx);
         return encoder;
     }
+    */
 
     /**
      * This test might be a invasive in terms of knowing what happens inside
      * {@link Lz4FrameEncoder#allocateBuffer(ChannelHandlerContext, ByteBuf, boolean)}, but this is safest way
      * of testing the overflow conditions as allocating the huge buffers fails in many CI environments.
      */
+    /*
     @Test
     public void testAllocateOnHeapBufferOverflowsOutputSize() {
         final int maxEncodeSize = Integer.MAX_VALUE;
@@ -239,7 +242,7 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
         assertTrue(channel.releaseOutbound());
         assertFalse(channel.releaseInbound());
     }
-
+*/
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void writingAfterClosedChannelDoesNotNPE() throws Exception {

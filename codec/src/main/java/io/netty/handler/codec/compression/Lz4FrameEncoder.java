@@ -65,6 +65,7 @@ import static java.util.Objects.requireNonNull;
  *  *       *       *    length   *     length    *           *     *      block      *
  *  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *     * * * * * * * * * *
  */
+// TODO: Convert me!
 public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
     static final int DEFAULT_MAX_ENCODE_SIZE = Integer.MAX_VALUE;
 

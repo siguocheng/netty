@@ -38,7 +38,7 @@ public class SnappyIntegrationTest extends AbstractIntegrationTest {
 
     @Override
     protected EmbeddedChannel createDecoder() {
-        return new EmbeddedChannel(new SnappyFrameDecoder());
+        return new EmbeddedChannel(new DecompressionHandler(SnappyDecompressor.newFactory()));
     }
 
     @Test

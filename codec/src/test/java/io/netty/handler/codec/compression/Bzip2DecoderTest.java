@@ -26,7 +26,6 @@ import java.util.Arrays;
 
 import static io.netty.handler.codec.compression.Bzip2Constants.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class Bzip2DecoderTest extends AbstractDecoderTest {
 
@@ -42,7 +41,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
 
     @Override
     protected EmbeddedChannel createChannel() {
-        return new EmbeddedChannel(new Bzip2Decoder());
+        return new EmbeddedChannel(new DecompressionHandler(Bzip2Decompressor.newFactory()));
     }
 
     private void writeInboundDestroyAndExpectDecompressionException(ByteBuf in) {

@@ -31,11 +31,11 @@ import java.util.function.Supplier;
  */
 public class CompressionHandler implements ChannelHandler {
 
-    private final Supplier<Compressor> compressorSupplier;
+    private final Supplier<? extends Compressor> compressorSupplier;
 
     private Compressor compressor;
 
-    CompressionHandler(Supplier<Compressor> compressorSupplier) {
+    public CompressionHandler(Supplier<? extends Compressor> compressorSupplier) {
         this.compressorSupplier = Objects.requireNonNull(compressorSupplier, "compressorSupplier");
     }
 
