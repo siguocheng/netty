@@ -32,7 +32,7 @@ import io.netty.handler.codec.compression.StandardCompressionOptions;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.compression.Zstd;
-import io.netty.handler.codec.compression.ZstdEncoder;
+import io.netty.handler.codec.compression.ZstdCompressor;
 import io.netty.handler.codec.compression.ZstdOptions;
 import io.netty.util.internal.ObjectUtil;
 
@@ -423,15 +423,15 @@ public class HttpContentCompressor extends HttpContentEncoder {
     }
 
     /**
-     * Compression Encoder Factory for create {@link ZstdEncoder}
+     * Compression Encoder Factory for create {@link ZstdCompressor}
      * used to compress http content for zstd content encoding
      */
     private final class ZstdEncoderFactory implements CompressionEncoderFactory {
 
         @Override
         public ChannelHandler createEncoder() {
-            return new ZstdEncoder(zstdOptions.compressionLevel(),
-                    zstdOptions.blockSize(), zstdOptions.maxEncodeSize());
+            return new CompressionHandler(ZstdCompressor.newFactory(zstdOptions.compressionLevel(),
+                    zstdOptions.blockSize(), zstdOptions.maxEncodeSize()));
         }
     }
 }
