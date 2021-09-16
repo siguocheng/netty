@@ -258,12 +258,14 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         }
         if (brotliOptions != null && BR.contentEqualsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                    ctx.channel().config(), new CompressionHandler(BrotliCompressor.newFactory(brotliOptions.parameters())));
+                    ctx.channel().config(), new CompressionHandler(
+                            BrotliCompressor.newFactory(brotliOptions.parameters())));
         }
         if (zstdOptions != null && ZSTD.contentEqualsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                    ctx.channel().config(), new CompressionHandler(ZstdCompressor.newFactory(zstdOptions.compressionLevel(),
-                    zstdOptions.blockSize(), zstdOptions.maxEncodeSize())));
+                    ctx.channel().config(), new CompressionHandler(
+                            ZstdCompressor.newFactory(zstdOptions.compressionLevel(),
+                                    zstdOptions.blockSize(), zstdOptions.maxEncodeSize())));
         }
         // 'identity' or unsupported
         return null;

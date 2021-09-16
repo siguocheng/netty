@@ -25,8 +25,6 @@ import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
-import io.netty.handler.codec.compression.ZlibDecoder;
-import io.netty.handler.codec.compression.ZlibEncoder;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
