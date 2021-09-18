@@ -264,11 +264,15 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * Create a new {@link Channel} and bind it.
      */
     public ChannelFuture bind(SocketAddress localAddress) {
-        validate();
+        validate(); // 验证参数是否为null
         return doBind(ObjectUtil.checkNotNull(localAddress, "localAddress"));
     }
 
-    private ChannelFuture doBind(final SocketAddress localAddress) {
+    private ChannelFuture  doBind(final SocketAddress localAddress) {
+        // 创建一个通道channel，包括channel中相关的pipeline、config，unsafe，id
+        // 将eventLoop绑定到channel上
+        // 在父pipeline添加handler，还有特殊handler（ServerBootstrapAcceptor）（里面包含child*的相关的配置）
+        // 将通道channel绑定到selector上,然后绑定通道channel在selector的事件
         final ChannelFuture regFuture = initAndRegister();
         final Channel channel = regFuture.channel();
         if (regFuture.cause() != null) {
@@ -278,6 +282,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         if (regFuture.isDone()) {
             // At this point we know that the registration was complete and successful.
             ChannelPromise promise = channel.newPromise();
+            // 通道channel绑定ip + 端口
             doBind0(regFuture, channel, localAddress, promise);
             return promise;
         } else {
@@ -307,7 +312,13 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     final ChannelFuture initAndRegister() {
         Channel channel = null;
         try {
+            // 根据Bootstrap中定义的通道class，创建一个通道。
+            // channelFactory对象属性会在.channel()中初始化ReflectiveChannelFactory
+            // ReflectiveChannelFactory.newChannel() {return constructor.newInstance();}，通过反射构建通道对象
+            // 以NioServerSocketChannel.class为例，
+            // 初始化的NioServerSocketChannel对象会包含NioServerSocketChannelConfig和pipeline，id，unsafe
             channel = channelFactory.newChannel();
+            // 添加ServerBootstrapAcceptor到pipeline中
             init(channel);
         } catch (Throwable t) {
             if (channel != null) {
@@ -320,6 +331,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             return new DefaultChannelPromise(new FailedChannel(), GlobalEventExecutor.INSTANCE).setFailure(t);
         }
 
+        // 给通道channel的eventLoop赋值
+        // 将通道channel绑定到selector上
+        // 绑定通道channel在selector的事件
         ChannelFuture regFuture = config().group().register(channel);
         if (regFuture.cause() != null) {
             if (channel.isRegistered()) {
@@ -353,6 +367,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             @Override
             public void run() {
                 if (regFuture.isSuccess()) {
+                    // AbstractChannel.bind()
                     channel.bind(localAddress, promise).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
                 } else {
                     promise.setFailure(regFuture.cause());

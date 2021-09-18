@@ -177,11 +177,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         checkNotNull(listener, "listener");
 
         synchronized (this) {
-            addListener0(listener);
+            addListener0(listener); // 添加listen
         }
 
         if (isDone()) {
-            notifyListeners();
+            notifyListeners(); // 如果已完成，就触发listen的回调方法
         }
 
         return this;
@@ -248,11 +248,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
         synchronized (this) {
             while (!isDone()) {
-                incWaiters();
+                incWaiters(); // waiters变量+1
                 try {
-                    wait();
+                    wait(); // 阻塞线程
                 } finally {
-                    decWaiters();
+                    decWaiters(); // 唤醒线程后，对象的waiters变量减1
                 }
             }
         }
@@ -401,7 +401,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     @Override
     public Promise<V> sync() throws InterruptedException {
-        await();
+        await(); // 阻塞线程,维护waiters变量
         rethrowIfFailed();
         return this;
     }
@@ -496,6 +496,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             }
         }
 
+        // 执行回调listen的回调函数
         safeExecute(executor, new Runnable() {
             @Override
             public void run() {
@@ -610,10 +611,12 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     private boolean setValue0(Object objResult) {
+        // 通过CAS给对象状态赋值
         if (RESULT_UPDATER.compareAndSet(this, null, objResult) ||
             RESULT_UPDATER.compareAndSet(this, UNCANCELLABLE, objResult)) {
+            // 唤醒被当前对象阻塞的所有线程，判断是否有listen注册了
             if (checkNotifyWaiters()) {
-                notifyListeners();
+                notifyListeners(); // 循环调用listen里的回调方法
             }
             return true;
         }
@@ -625,10 +628,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      * @return {@code true} if there are any listeners attached to the promise, {@code false} otherwise.
      */
     private synchronized boolean checkNotifyWaiters() {
+        // 被阻塞的线程个数大于0，唤醒这些线程
         if (waiters > 0) {
             notifyAll();
         }
-        return listeners != null;
+        return listeners != null; // 如果没有注册的listeners，返回false
     }
 
     private void incWaiters() {

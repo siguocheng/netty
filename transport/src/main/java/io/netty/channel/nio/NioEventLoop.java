@@ -434,6 +434,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     @Override
     protected void run() {
         int selectCnt = 0;
+        // 死循环
         for (;;) {
             try {
                 int strategy;
@@ -447,12 +448,14 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                         // fall-through to SELECT since the busy-wait is not supported with NIO
 
                     case SelectStrategy.SELECT:
-                        long curDeadlineNanos = nextScheduledTaskDeadlineNanos();
+                        long curDeadlineNanos = nextScheduledTaskDeadlineNanos(); // 下一个最近任务的间隔时间
+                        // -1代表队列中不存在任务
                         if (curDeadlineNanos == -1L) {
                             curDeadlineNanos = NONE; // nothing on the calendar
                         }
                         nextWakeupNanos.set(curDeadlineNanos);
                         try {
+                            // 2个队列中没有任务 TODO 这2个队列代表什么?
                             if (!hasTasks()) {
                                 strategy = select(curDeadlineNanos);
                             }
@@ -476,15 +479,18 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 selectCnt++;
                 cancelledKeys = 0;
                 needsToSelectAgain = false;
-                final int ioRatio = this.ioRatio;
+                final int ioRatio = this.ioRatio; // IO操作和非IO操作的执行比率
                 boolean ranTasks;
                 if (ioRatio == 100) {
                     try {
+                        // 如果select.select() > 0
                         if (strategy > 0) {
+                            // 处理select.select()返回的selectedKeys
                             processSelectedKeys();
                         }
                     } finally {
                         // Ensure we always run tasks.
+                        // 执行队列中的任务
                         ranTasks = runAllTasks();
                     }
                 } else if (strategy > 0) {
@@ -493,6 +499,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                         processSelectedKeys();
                     } finally {
                         // Ensure we always run tasks.
+                        // 根据公式计算执行队列中的任务的超时事件
+                        // 执行队列任务
                         final long ioTime = System.nanoTime() - ioStartTime;
                         ranTasks = runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
                     }
@@ -552,6 +560,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             }
             return true;
         }
+        // selectCntday大于=512,就重建selector
         if (SELECTOR_AUTO_REBUILD_THRESHOLD > 0 &&
                 selectCnt >= SELECTOR_AUTO_REBUILD_THRESHOLD) {
             // The selector returned prematurely many times in a row.
@@ -617,6 +626,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             i.remove();
 
             if (a instanceof AbstractNioChannel) {
+                // 处理各个通道监听的事件
                 processSelectedKey(k, (AbstractNioChannel) a);
             } else {
                 @SuppressWarnings("unchecked")
@@ -716,6 +726,12 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             // Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead
             // to a spin loop
             if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
+                /**
+                 * 通道是NioSocketChannel
+                 * @see AbstractNioByteChannel.NioByteUnsafe#read()
+                 * 通道是NioServerSocketChannel的时候
+                 * @see AbstractNioMessageChannel.NioMessageUnsafe#read()
+                 */
                 unsafe.read();
             }
         } catch (CancelledKeyException ignored) {
@@ -806,9 +822,13 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     }
 
     private int select(long deadlineNanos) throws IOException {
+        // 队列中不存在任务,就调用selector.select(),线程阻塞
         if (deadlineNanos == NONE) {
             return selector.select();
         }
+        // 如果距离下一个执行任务的时间在5微秒内,
+        // 就执行selector.selectNow(),不阻塞,立刻返回
+        // 否则selector.select(超时时间),
         // Timeout will only be 0 if deadline is within 5 microsecs
         long timeoutMillis = deadlineToDelayNanos(deadlineNanos + 995000L) / 1000000L;
         return timeoutMillis <= 0 ? selector.selectNow() : selector.select(timeoutMillis);

@@ -70,18 +70,18 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
      */
     protected MultithreadEventExecutorGroup(int nThreads, Executor executor,
                                             EventExecutorChooserFactory chooserFactory, Object... args) {
-        checkPositive(nThreads, "nThreads");
+        checkPositive(nThreads, "nThreads"); // 验证传入的线程数是否小于0
 
         if (executor == null) {
-            executor = new ThreadPerTaskExecutor(newDefaultThreadFactory());
+            executor = new ThreadPerTaskExecutor(newDefaultThreadFactory()); // 初始化一个线程执行器，传入一个线程工厂
         }
 
-        children = new EventExecutor[nThreads];
+        children = new EventExecutor[nThreads]; // 初始化eventLoop数组
 
         for (int i = 0; i < nThreads; i ++) {
             boolean success = false;
             try {
-                children[i] = newChild(executor, args);
+                children[i] = newChild(executor, args); // 创建eventLoop数组集合
                 success = true;
             } catch (Exception e) {
                 // TODO: Think about if this is a good exception type
@@ -108,7 +108,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             }
         }
 
-        chooser = chooserFactory.newChooser(children);
+        chooser = chooserFactory.newChooser(children); // 初始化eventLoop选择器
 
         final FutureListener<Object> terminationListener = new FutureListener<Object>() {
             @Override
@@ -125,7 +125,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
 
         Set<EventExecutor> childrenSet = new LinkedHashSet<EventExecutor>(children.length);
         Collections.addAll(childrenSet, children);
-        readonlyChildren = Collections.unmodifiableSet(childrenSet);
+        readonlyChildren = Collections.unmodifiableSet(childrenSet); // 创建一个不允许更改的set
     }
 
     protected ThreadFactory newDefaultThreadFactory() {

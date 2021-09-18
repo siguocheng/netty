@@ -257,6 +257,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+        // DefaultChannelPipeline.bind
         return pipeline.bind(localAddress, promise);
     }
 
@@ -474,11 +475,18 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
+            // 给通道eventLoop赋值
             AbstractChannel.this.eventLoop = eventLoop;
 
+            // 当前线程是否为Channel对应的NioEventLoop线程
             if (eventLoop.inEventLoop()) {
+                // 如果是，则不存在多线程并发操作，直接注册
+                // 将通道channel注册到selector中
+                // 绑定通道channel在selector的事件
+                // 回调pipeline的相关的回调函数
                 register0(promise);
             } else {
+                // 如果不是，说明是其他线程或用户线程发起的注册，存在并发操作，将其放进NioEventLoop任务队列中执行
                 try {
                     eventLoop.execute(new Runnable() {
                         @Override
@@ -501,11 +509,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             try {
                 // check if the channel is still open as it could be closed in the mean time when the register
                 // call was outside of the eventLoop
+                // 判断Channel是否打开了
                 if (!promise.setUncancellable() || !ensureOpen(promise)) {
                     return;
                 }
                 boolean firstRegistration = neverRegistered;
-                doRegister();
+                doRegister(); // 将通道channel注册到selector中
                 neverRegistered = false;
                 registered = true;
 
@@ -525,6 +534,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         // again so that we process inbound data.
                         //
                         // See https://github.com/netty/netty/issues/4805
+
+                        // 绑定通道channel的监听事件
                         beginRead();
                     }
                 }
@@ -559,6 +570,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             boolean wasActive = isActive();
             try {
+                // 通道绑定地址和端口
                 doBind(localAddress);
             } catch (Throwable t) {
                 safeSetFailure(promise, t);
@@ -588,6 +600,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             boolean wasActive = isActive();
             try {
+                // 服务端不支持主动关闭连接
+                // 客户端调用java NIO的close方法
                 doDisconnect();
                 // Reset remoteAddress and localAddress
                 remoteAddress = null;
@@ -716,6 +730,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             closeInitiated = true;
 
+            // 执行关闭操作，将消息发送缓冲数组置空，通知JVM回收
             final boolean wasActive = isActive();
             final ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
             this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
@@ -754,6 +769,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         outboundBuffer.close(closeCause);
                     }
                 }
+                // 是否处于刷新状态，如果处于刷新状态说明还有消息没发出去，需要等到所有消息发完后再关闭
                 if (inFlush0) {
                     invokeLater(new Runnable() {
                         @Override
@@ -849,6 +865,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             assertEventLoop();
 
             try {
+                /**
+                 * @see io.netty.channel.nio.AbstractNioChannel#doBeginRead
+                 * 绑定通道channel的监听事件
+                 */
                 doBeginRead();
             } catch (final Exception e) {
                 invokeLater(new Runnable() {

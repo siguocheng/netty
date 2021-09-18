@@ -354,6 +354,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     @Override
     public ChannelHandlerContext fireChannelRead(final Object msg) {
+
+        System.out.println(getClass() + "            read");
         invokeChannelRead(findContextInbound(MASK_CHANNEL_READ), msg);
         return this;
     }
@@ -878,7 +880,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         EventExecutor currentExecutor = executor();
         do {
             ctx = ctx.next;
-        } while (skipContext(ctx, currentExecutor, mask, MASK_ONLY_INBOUND));
+        } while (skipContext(ctx, currentExecutor, mask, MASK_ONLY_INBOUND)); // 如果下一个Handler的某个事件，标注@Skip的会被跳过 继续寻找下一个
         return ctx;
     }
 
@@ -911,6 +913,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         handlerState = REMOVE_COMPLETE;
     }
 
+    // cas修改节点的状态
     final boolean setAddComplete() {
         for (;;) {
             int oldState = handlerState;

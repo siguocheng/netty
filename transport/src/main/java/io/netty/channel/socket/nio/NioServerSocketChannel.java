@@ -72,6 +72,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
      * Create a new instance
      */
     public NioServerSocketChannel() {
+        // 返回SelectorProvider.provider().openServerSocketChannel()打开的通道，作为参数
         this(newSocket(DEFAULT_SELECTOR_PROVIDER));
     }
 
@@ -87,6 +88,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
      */
     public NioServerSocketChannel(ServerSocketChannel channel) {
         super(null, channel, SelectionKey.OP_ACCEPT);
+        // 通道和通道的socket初始化ServerSocketChannelConfig
         config = new NioServerSocketChannelConfig(this, javaChannel().socket());
     }
 
@@ -109,7 +111,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     public boolean isActive() {
         // As java.nio.ServerSocketChannel.isBound() will continue to return true even after the channel was closed
         // we will also need to check if it is open.
-        return isOpen() && javaChannel().socket().isBound();
+        return isOpen() && javaChannel().socket().isBound(); // socket是否已绑定接口
     }
 
     @Override
@@ -144,7 +146,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
 
     @Override
     protected int doReadMessages(List<Object> buf) throws Exception {
-        SocketChannel ch = SocketUtils.accept(javaChannel());
+        SocketChannel ch = SocketUtils.accept(javaChannel()); // 取得连接的socketChannel
 
         try {
             if (ch != null) {

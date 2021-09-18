@@ -173,6 +173,8 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
         EventLoopTaskQueueFactory tailTaskQueueFactory = null;
 
         int argsLength = args.length;
+        // 默认情况下argsLength=3，因此不会创建taskQueueFactory和tailTaskQueueFactory
+        // 在NioEventLoop构造方法中会创建
         if (argsLength > 3) {
             taskQueueFactory = (EventLoopTaskQueueFactory) args[3];
         }

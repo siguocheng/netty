@@ -77,11 +77,11 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      * @param readInterestOp    the ops to set to receive data from the {@link SelectableChannel}
      */
     protected AbstractNioChannel(Channel parent, SelectableChannel ch, int readInterestOp) {
-        super(parent);
+        super(parent); // 调用父类AbstractChannel的构造方法，初始化通道、通道id、unsafe、和pipeline,parent=null
         this.ch = ch;
-        this.readInterestOp = readInterestOp;
+        this.readInterestOp = readInterestOp; // 监听通道事件类型
         try {
-            ch.configureBlocking(false);
+            ch.configureBlocking(false); // 设置通道为非阻塞
         } catch (IOException e) {
             try {
                 ch.close();
@@ -377,6 +377,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         boolean selected = false;
         for (;;) {
             try {
+                // 将通道注册到selector中
                 selectionKey = javaChannel().register(eventLoop().unwrappedSelector(), 0, this);
                 return;
             } catch (CancelledKeyException e) {

@@ -199,10 +199,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public final ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler) {
         final AbstractChannelHandlerContext newCtx;
         synchronized (this) {
+            // 1.检查是否有重复handler
             checkMultiplicity(handler);
-
+            // 2.创建节点
             newCtx = newContext(group, filterName(name, handler), handler);
-
+            // 3.添加节点
             addLast0(newCtx);
 
             // If the registered is false it means that the channel was not registered on an eventLoop yet.
@@ -220,6 +221,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 return this;
             }
         }
+        // 4.回调用户方法
         callHandlerAdded0(newCtx);
         return this;
     }
@@ -414,6 +416,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline remove(ChannelHandler handler) {
+        // 通过handler找到对应的context节点
+        // 调整双向链表指针删除
+        // 是指节点状态为REMOVE_COMPLETE
+        // 回调用户函数
         remove(getContextOrDie(handler));
         return this;
     }
@@ -592,9 +598,19 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         oldCtx.next = newCtx;
     }
 
+    /**
+     * @see ChannelHandlerAdapter#isSharable
+     * @param handler
+     */
     private static void checkMultiplicity(ChannelHandler handler) {
         if (handler instanceof ChannelHandlerAdapter) {
             ChannelHandlerAdapter h = (ChannelHandlerAdapter) handler;
+
+            /**
+             * 如果handler实例没有@sharable,并且之前添加过,就报异常信息
+             * @see ChannelHandlerAdapter#isSharable 将handler对应的isSharable值缓存起来
+             *
+             */
             if (!h.isSharable() && h.added) {
                 throw new ChannelPipelineException(
                         h.getClass().getName() +
@@ -1077,6 +1093,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private AbstractChannelHandlerContext getContextOrDie(ChannelHandler handler) {
+        // 找到hadnler对应的context
         AbstractChannelHandlerContext ctx = (AbstractChannelHandlerContext) context(handler);
         if (ctx == null) {
             throw new NoSuchElementException(handler.getClass().getName());
