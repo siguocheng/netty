@@ -167,6 +167,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         super(parent);
         this.addTaskWakesUp = addTaskWakesUp;
         this.maxPendingTasks = DEFAULT_MAX_PENDING_EXECUTOR_TASKS;
+        // 创建执行器 executor就是EventExecutorGroup里创建的，this就是NioEventLoop
+        // this.executor就是NioEventLoop的成员变量
         this.executor = ThreadExecutorMap.apply(executor, this);
         this.taskQueue = ObjectUtil.checkNotNull(taskQueue, "taskQueue");
         this.rejectedExecutionHandler = ObjectUtil.checkNotNull(rejectedHandler, "rejectedHandler");
@@ -976,9 +978,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     private void doStartThread() {
         assert thread == null;
+        /**
+         * @see io.netty.util.concurrent.ThreadPerTaskExecutor#execute
+         */
         executor.execute(new Runnable() {
             @Override
             public void run() {
+                // 启动线程，并且将当前线程复制给当前thread变量
                 thread = Thread.currentThread();
                 if (interrupted) {
                     thread.interrupt();
@@ -987,7 +993,11 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 boolean success = false;
                 updateLastExecutionTime();
                 try {
-
+                    // this就是NioEventLoop，调用NioEventLoop的run方法
+                    // 开启selector的select()的监听
+                    /**
+                     * @see io.netty.channel.nio.NioEventLoop#run
+                     */
                     SingleThreadEventExecutor.this.run();
                     success = true;
                 } catch (Throwable t) {

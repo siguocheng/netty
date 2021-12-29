@@ -81,6 +81,9 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         for (int i = 0; i < nThreads; i ++) {
             boolean success = false;
             try {
+                /**
+                 * @see io.netty.channel.nio.NioEventLoopGroup#newChild
+                 */
                 children[i] = newChild(executor, args); // 创建eventLoop数组集合
                 success = true;
             } catch (Exception e) {

@@ -272,7 +272,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         // 创建一个通道channel，包括channel中相关的pipeline、config，unsafe，id
         // 将eventLoop绑定到channel上
         // 在父pipeline添加handler，还有特殊handler（ServerBootstrapAcceptor）（里面包含child*的相关的配置）
-        // 将通道channel绑定到selector上,然后绑定通道channel在selector的事件
+        // 将通道channel绑定到selector上,然后绑定通道channel在selector的监听事件
         final ChannelFuture regFuture = initAndRegister();
         final Channel channel = regFuture.channel();
         if (regFuture.cause() != null) {
@@ -318,7 +318,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             // 以NioServerSocketChannel.class为例，
             // 初始化的NioServerSocketChannel对象会包含NioServerSocketChannelConfig和pipeline，id，unsafe
             channel = channelFactory.newChannel();
-            // 添加ServerBootstrapAcceptor到pipeline中
+            // 将.handler方法指定的handler和ServerBootstrapAcceptor添加到pipeline中
             init(channel);
         } catch (Throwable t) {
             if (channel != null) {
@@ -334,6 +334,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         // 给通道channel的eventLoop赋值
         // 将通道channel绑定到selector上
         // 绑定通道channel在selector的事件
+        // config().group() bossGroup
         ChannelFuture regFuture = config().group().register(channel);
         if (regFuture.cause() != null) {
             if (channel.isRegistered()) {

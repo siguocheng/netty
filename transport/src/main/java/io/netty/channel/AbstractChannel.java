@@ -475,10 +475,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
-            // 给通道eventLoop赋值
+            // 给通道eventLoop绑定到当前通道
             AbstractChannel.this.eventLoop = eventLoop;
-
             // 当前线程是否为Channel对应的NioEventLoop线程
+            // 当前线程是否是SingleThreadEventExecutor的thread变量，也就是说是否是eventLoop里的线程
             if (eventLoop.inEventLoop()) {
                 // 如果是，则不存在多线程并发操作，直接注册
                 // 将通道channel注册到selector中
@@ -487,7 +487,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 register0(promise);
             } else {
                 // 如果不是，说明是其他线程或用户线程发起的注册，存在并发操作，将其放进NioEventLoop任务队列中执行
+                // 如果EventLoop中的线程没有启动，就先启动线程，通过volatile int state变量，只会启动一个线程
+                // 将启动的线程复制给EventLoop（SingleThreadEventExecutor）中的thread变量
                 try {
+                    /**
+                     * @see io.netty.util.concurrent.SingleThreadEventExecutor#execute(Runnable, boolean) 
+                     */
                     eventLoop.execute(new Runnable() {
                         @Override
                         public void run() {
@@ -514,7 +519,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     return;
                 }
                 boolean firstRegistration = neverRegistered;
-                doRegister(); // 将通道channel注册到selector中
+                doRegister(); // 将通道channel注册到selector中，监听操作是0，也就是说未指定channel的监听事件
                 neverRegistered = false;
                 registered = true;
 
@@ -535,7 +540,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         //
                         // See https://github.com/netty/netty/issues/4805
 
-                        // 绑定通道channel的监听事件
+                        // 绑定通道channel的在selector的监听事件
                         beginRead();
                     }
                 }
@@ -867,7 +872,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             try {
                 /**
                  * @see io.netty.channel.nio.AbstractNioChannel#doBeginRead
-                 * 绑定通道channel的监听事件
+                 * 绑定通道channel的在selector上的监听事件
                  */
                 doBeginRead();
             } catch (final Exception e) {
